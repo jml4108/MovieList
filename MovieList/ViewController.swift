@@ -7,19 +7,20 @@
 
 import UIKit
 import RxSwift
+import Alamofire
 
 class ViewController: UIViewController {
     var movieData: MovieData?
     @IBOutlet weak var table: UITableView!
-    var movieURL = "https://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=8a150a341d7062dbacc7b64ba5c90a2a&targetDt="
+    var urlString = "https://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=8a150a341d7062dbacc7b64ba5c90a2a&targetDt="
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         table.delegate = self
         table.dataSource = self
-        movieURL += makeYeterdayString()
-        self.getData()
+        urlString += makeYeterdayString()
+        getData()
     }
     
     //어제 박스오피스 구하는 함수.
@@ -33,32 +34,26 @@ class ViewController: UIViewController {
     
     //open api 데이터 가져오기
     func getData() {
-        //URL만들기
-        if let url = URL(string: movieURL) {    //옵셔널 바인딩
-            //세션 만들기
-            let session = URLSession(configuration: .default)
-            let task = session.dataTask(with: url) { data, response, error in
-                if error != nil {
-                    print(error!)
-                    return
-                }
-                if let JSONdata = data {
-                    let decoder = JSONDecoder()
-                    //에러 처리
-                    do {
-                        //.self는 static metatype
-                        let decodedData = try decoder.decode(MovieData.self, from: JSONdata)
-                        self.movieData = decodedData    //closure에서는 self로 property 접근
-                        DispatchQueue.main.async {      //main thread에서 동작.
-                            self.table.reloadData()
-                        }
-                    } catch {
-                        print(error)
+        //HTTP Request
+        AF.request(urlString).responseJSON { response in
+            switch response.result {
+            case .success(let res):
+                do {
+                    //반환 값을 Data 타입으로 변환.
+                    let jsonData = try JSONSerialization.data(withJSONObject: res, options: .prettyPrinted)
+                    //Data 디코팅.
+                    let json = try JSONDecoder().decode(MovieData.self, from: jsonData)
+                    self.movieData = json
+                    DispatchQueue.main.async {
+                        self.table.reloadData()
                     }
                 }
-                
+                catch(let err) {
+                    print(err)
+                }
+            case .failure(let err):
+                print(err)
             }
-            task.resume()   //4단계.
         }
     }
     

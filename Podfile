@@ -6,6 +6,7 @@ target 'MovieList' do
   use_frameworks!
 
   pod 'RxSwift'
+  pod 'Alamofire'
 
   # Pods for MovieList
 
